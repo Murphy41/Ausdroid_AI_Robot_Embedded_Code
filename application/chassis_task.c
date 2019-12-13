@@ -54,21 +54,21 @@ void chassis_task(void const *argument)
       {
         vx = (float)prc_info->ch2 / 660 * MAX_CHASSIS_VX_SPEED;
         vy = -(float)prc_info->ch1 / 660 * MAX_CHASSIS_VY_SPEED;
-        wz = -pid_calculate(&pid_follow, follow_relative_angle, 0);
-        chassis_set_offset(pchassis, ROTATE_X_OFFSET, ROTATE_Y_OFFSET);
-        chassis_set_speed(pchassis, vx, vy, wz);
+        wz = -pid_calculate(&pid_follow, follow_relative_angle, 0); //地盘跟随云台 所以这里底盘不用设置角度 pid_calculate是计算底盘跟随云台的时候底盘转角
+        chassis_set_offset(pchassis, ROTATE_X_OFFSET, ROTATE_Y_OFFSET); // 初始offset
+        chassis_set_speed(pchassis, vx, vy, wz);   //底盘跟随云台只是旋转跟随 本身的速度和xy偏移依旧需要set
       }
 
-      if (rc_device_get_state(prc_dev, RC_S2_MID) == RM_OK)
+      if (rc_device_get_state(prc_dev, RC_S2_MID) == RM_OK)   //云台跟随底盘模式
       {
         vx = (float)prc_info->ch2 / 660 * MAX_CHASSIS_VX_SPEED;
         vy = -(float)prc_info->ch1 / 660 * MAX_CHASSIS_VY_SPEED;
-        wz = -(float)prc_info->ch3 / 660 * MAX_CHASSIS_VW_SPEED;
-        chassis_set_offset(pchassis, 0, 0);
-        chassis_set_speed(pchassis, vx, vy, wz);
+        wz = -(float)prc_info->ch3 / 660 * MAX_CHASSIS_VW_SPEED;  //云台跟随地盘 所以这里地盘得设置角度
+        chassis_set_offset(pchassis, 0, 0);    //为什么不是7和0？？？？？？？？
+        chassis_set_speed(pchassis, vx, vy, wz);  //set speed参数的时候用的都是vw 这里为什么用wz  笔误？？？？？？？？
       }
 
-      if (rc_device_get_state(prc_dev, RC_S2_MID2DOWN) == RM_OK)
+      if (rc_device_get_state(prc_dev, RC_S2_MID2DOWN) == RM_OK) 
       {
         chassis_set_speed(pchassis, 0, 0, 0);
       }

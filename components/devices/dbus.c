@@ -114,7 +114,7 @@ static void get_dr16_data(rc_device_t rc_dev, uint8_t *buff)
 
   rc_info_t rc = &rc_dev->rc_info;
   
-  rc->ch1 = (buff[0] | buff[1] << 8) & 0x07FF;
+  rc->ch1 = (buff[0] | buff[1] << 8) & 0x07FF; // 竖线位或 《bit左移八位  7FF是2047
   rc->ch1 -= 1024;
   rc->ch2 = (buff[1] >> 3 | buff[2] << 5) & 0x07FF;
   rc->ch2 -= 1024;

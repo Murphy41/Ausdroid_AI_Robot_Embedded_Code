@@ -13,7 +13,7 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
- ***************************************************************************/
+ *********************F******************************************************/
 
 #include "can.h"
 #include "board.h"
@@ -28,28 +28,34 @@
 
 #define DEFAULT_IMU_TEMP 50
 
+/*add by qian*/
+/* gimbal patrol angle (degree) */
+//#define PATROL_ANGLE  15
 /* patrol period time (ms) */
+//#define PATROL_PERIOD 1000
+
+/* gimbal period time (ms) */
 #define GIMBAL_PERIOD 2
 /* gimbal back center time (ms) */
 #define BACK_CENTER_TIME 3000
 
 float pit_delta, yaw_delta;
 
-static void imu_temp_ctrl_init(void);
+static void imu_temp_ctrl_init(void); // staic 局部变量 void 无返回值
 static int32_t gimbal_imu_updata(void *argc);
 static int32_t imu_temp_keep(void *argc);
 static void auto_gimbal_adjust(gimbal_t pgimbal);
 static void gimbal_state_init(gimbal_t pgimbal);
 
-uint8_t auto_adjust_f;
+uint8_t auto_adjust_f; 
 uint8_t auto_init_f;
 
 /* control ramp parameter */
 static ramp_t yaw_ramp = RAMP_GEN_DAFAULT;
 static ramp_t pitch_ramp = RAMP_GEN_DAFAULT;
 
-int32_t yaw_angle_fdb_js, yaw_angle_ref_js;
-int32_t pit_angle_fdb_js, pit_angle_ref_js;
+int32_t yaw_angle_fdb_js, yaw_angle_ref_js; // yaw 偏航 左右
+int32_t pit_angle_fdb_js, pit_angle_ref_js; // 倾斜 上下
 int32_t yaw_spd_fdb_js, yaw_spd_ref_js;
 int32_t pit_spd_fdb_js, pit_spd_ref_js;
 
@@ -62,7 +68,7 @@ void gimbal_task(void const *argument)
   cali_sys_t *pparam = NULL;
 
   pgimbal = gimbal_find("gimbal");
-  prc_dev = rc_device_find("can_rc");
+  prc_dev = rc_device_find("can_rc");  // protocol
   pparam = get_cali_param();
 
   if (pparam->gim_cali_data.calied_done == CALIED_FLAG)
@@ -84,44 +90,54 @@ void gimbal_task(void const *argument)
   {
   }
 
-  soft_timer_register(imu_temp_keep, (void *)pgimbal, 5);
+  soft_timer_register(imu_temp_keep, (void *)pgimbal, 5); // 温度计 没用
   soft_timer_register(gimbal_push_info, (void *)pgimbal, 10);
 
   imu_temp_ctrl_init();
 
   while (1)
   {
-    if (rc_device_get_state(prc_dev, RC_S2_UP) == RM_OK)
+    if (rc_device_get_state(prc_dev, RC_S2_UP) == RM_OK)  //右边的拨片保持在上
     {
-      gimbal_set_yaw_mode(pgimbal, GYRO_MODE);
-      pit_delta = -(float)prc_info->ch4 * 0.0007f;
-      yaw_delta = -(float)prc_info->ch3 * 0.0007f;
-      gimbal_set_pitch_delta(pgimbal, pit_delta);
-      gimbal_set_yaw_delta(pgimbal, yaw_delta);
+      gimbal_set_yaw_mode(pgimbal, GYRO_MODE);       //设定陀螺仪模式（手动模式），按照陀螺仪参数运动
+      pit_delta = -(float)prc_info->ch4 * 0.0007f;		//遥控器摇杆控制云台俯仰位置，陀螺仪使其保持
+      yaw_delta = -(float)prc_info->ch3 * 0.0007f;  //遥控器遥杆控制云台左右位置，陀螺仪使其保持
+      gimbal_set_pitch_delta(pgimbal, pit_delta);    
+      gimbal_set_yaw_delta(pgimbal, yaw_delta);    //设置云台转动参数
     }
 
-    if (rc_device_get_state(prc_dev, RC_S2_MID) == RM_OK)
-    {
-      gimbal_set_yaw_mode(pgimbal, ENCODER_MODE);
-      pit_delta = -(float)prc_info->ch4 * 0.0007f;
-      gimbal_set_pitch_delta(pgimbal, pit_delta);
+    if (rc_device_get_state(prc_dev, RC_S2_MID) == RM_OK)  //右边的拨片保持在中，可用作Debug
+    {			
+			gimbal_set_yaw_mode(pgimbal, PATROL_MODE);  			//进入patrol mode		
 
-      if (rc_device_get_state(prc_dev, RC_S2_UP2MID) == RM_OK)
+      if (rc_device_get_state(prc_dev, RC_S2_UP2MID) == RM_OK)		//切换瞬间？
       {
         gimbal_set_yaw_angle(pgimbal, 0, 0);
       }
     }
 
-    if (rc_device_get_state(prc_dev, RC_S2_DOWN2MID) == RM_OK)
+    if (rc_device_get_state(prc_dev, RC_S2_DOWN2MID) == RM_OK)		//切换瞬间？
     {
       gimbal_set_yaw_angle(pgimbal, 0, 0);
     }
-
+ 
+		//****************************************************************改的*************************************************************
     if (rc_device_get_state(prc_dev, RC_S2_DOWN) == RM_OK)
-    {
-      gimbal_set_yaw_mode(pgimbal, ENCODER_MODE);
-    }
-
+		{
+			gimbal_set_yaw_mode(pgimbal, ENCODER_MODE);
+		}
+    //{
+		//	if (Patrol_FLAG == 1)
+			/*{				
+				gimbal_set_yaw_mode(pgimbal, PATROL_MODE);
+			}
+			else if
+			{
+				gimbal_set_yaw_mode(pgimbal, ENCODER_MODE);
+			}
+   // }      */
+		 //****************************************************************改的***********************************************************8
+		
     if (get_offline_state() == 0)
     {
       gimbal_state_init(pgimbal);
@@ -147,7 +163,7 @@ void gimbal_task(void const *argument)
 
 static int32_t gimbal_imu_updata(void *argc)
 {
-  struct ahrs_sensor mpu_sensor;
+  struct ahrs_sensor mpu_sensor;  // ahrs mpu 陀螺仪加速器型号
   struct attitude mahony_atti;
   gimbal_t pgimbal = (gimbal_t)argc;
   mpu_get_data(&mpu_sensor);
@@ -157,7 +173,7 @@ static int32_t gimbal_imu_updata(void *argc)
   return 0;
 }
 
-struct pid pid_imu_tmp;
+struct pid pid_imu_tmp; //惯性测量单元 用来定位的
 
 static void imu_temp_ctrl_init(void)
 {
@@ -167,16 +183,16 @@ static void imu_temp_ctrl_init(void)
 static int32_t imu_temp_keep(void *argc)
 {
   float temp;
-  mpu_get_temp(&temp);
-  pid_calculate(&pid_imu_tmp, temp, DEFAULT_IMU_TEMP);
+  mpu_get_temp(&temp); //微处理器和内存保护单元
+  pid_calculate(&pid_imu_tmp, temp, DEFAULT_IMU_TEMP); 
   mpu_heat_output(pid_imu_tmp.out);
   return 0;
 }
 
-uint8_t auto_adjust_f;
-volatile uint32_t pit_time, yaw_time;
-uint32_t pit_cnt;
-volatile uint16_t yaw_ecd_r, yaw_ecd_l;
+uint8_t auto_adjust_f;//    是否adjust判断值
+volatile uint32_t pit_time, yaw_time;//volatile 是一个类型修饰符。volatile 的作用是作为指令关键字，确保本条指令不会因编译器的优化而省略
+uint32_t pit_cnt;  //cnt计数器
+volatile uint16_t yaw_ecd_r, yaw_ecd_l; // ecd是encode模式
 volatile uint16_t pit_ecd_c, yaw_ecd_c;
 
 void send_gimbal_current(int16_t iq1, int16_t iq2, int16_t iq3)
@@ -201,7 +217,7 @@ static void auto_gimbal_adjust(gimbal_t pgimbal)
   if (auto_adjust_f)
   {
     pid_struct_init(&pid_pit, 2000, 0, 60, 0, 0);
-    pid_struct_init(&pid_pit_spd, 30000, 3000, 60, 0.2, 0);
+    pid_struct_init(&pid_pit_spd, 30000, 3000, 60, 0.2, 0);// spd 是speed 双环pid 
     while (1)
     {
       gimbal_imu_updata(pgimbal);
@@ -212,7 +228,7 @@ static void auto_gimbal_adjust(gimbal_t pgimbal)
       send_gimbal_current(0, -pid_pit_spd.out, 0);
       HAL_Delay(2);
 
-      if ((fabs(pgimbal->sensor.gyro_angle.pitch) < 0.1))
+      if ((fabs(pgimbal->sensor.gyro_angle.pitch) < 0.1)) // cnt 计数是为了当他小于阈值1000次后即视为稳定
       {
         pit_cnt++;
       }
@@ -260,8 +276,8 @@ static void auto_gimbal_adjust(gimbal_t pgimbal)
         }
       }
     }
-    gimbal_save_data(yaw_ecd_c, pit_ecd_c);
-    gimbal_set_offset(pgimbal, yaw_ecd_c, pit_ecd_c);
+    gimbal_save_data(yaw_ecd_c, pit_ecd_c); //存了yaw和pitch center的数
+    gimbal_set_offset(pgimbal, yaw_ecd_c, pit_ecd_c); //和yaw和pitch center的数还有pgimbal设成offset 所以pgimbal是啥？？？？？？？
     auto_adjust_f = 0;
     __disable_irq();
     NVIC_SystemReset();
@@ -301,7 +317,7 @@ static void gimbal_state_init(gimbal_t pgimbal)
       if (fabs(pgimbal->ecd_angle.pitch) < 1.5f)
       {
         gimbal_yaw_enable(pgimbal);
-        gimbal_set_yaw_angle(pgimbal, pgimbal->ecd_angle.yaw * (1 - ramp_calculate(&yaw_ramp)), 0);
+        gimbal_set_yaw_angle(pgimbal, pgimbal->ecd_angle.yaw * (1 - ramp_calculate(&yaw_ramp)), 0); 
         if (fabs(pgimbal->ecd_angle.yaw) < 1.5f)
         {
           auto_init_f = 1;

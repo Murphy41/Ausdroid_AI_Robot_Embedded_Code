@@ -17,12 +17,25 @@
 
 #include "gimbal.h"
 
-static int32_t yaw_gyro_input_convert(struct controller *ctrl, void *input);
+/*add by qian*/
+/* gimbal patrol angle (degree) */
+#define PATROL_ANGLE  45
+/* patrol period time (ms) */
+#define PATROL_PERIOD 3000
+
+/* gimbal period time (ms) */
+#define GIMBAL_PERIOD 2
+/* gimbal back center time (ms) */
+#define BACK_CENTER_TIME 3000
+static int8_t count_sign = 1;
+static float yaw_patrol = 0;
+static int32_t yaw_gyro_input_convert(struct controller *ctrl, void *input);  
 static int32_t pitch_gyro_input_convert(struct controller *ctrl, void *input);
 static int32_t yaw_ecd_input_convert(struct controller *ctrl, void *input);
 static int32_t pitch_ecd_input_convert(struct controller *ctrl, void *input);
 static int32_t gimbal_set_yaw_gyro_angle(struct gimbal *gimbal, float yaw, uint8_t mode);
 static int16_t gimbal_get_ecd_angle(int16_t raw_ecd, int16_t center_offset);
+static int32_t gimbal_patrol_handler(struct gimbal *gimbal);
 
 int32_t gimbal_cascade_register(struct gimbal *gimbal, const char *name, enum device_can can)
 {
@@ -216,30 +229,47 @@ int32_t gimbal_set_pitch_mode(struct gimbal *gimbal, uint8_t mode)
       gimbal->ctrl[PITCH_MOTOR_INDEX].convert_feedback = pitch_ecd_input_convert;
       gimbal_set_pitch_angle(gimbal, gimbal->ecd_angle.pitch);
     }
+		else if	(mode == PATROL_MODE) 
+		{
+			gimbal->ctrl[PITCH_MOTOR_INDEX].convert_feedback = pitch_ecd_input_convert;
+      gimbal_set_pitch_angle(gimbal, gimbal->ecd_angle.pitch);
+		}
   }
 
   return RM_OK;
 }
 
-int32_t gimbal_set_yaw_mode(struct gimbal *gimbal, uint8_t mode)
+int32_t gimbal_set_yaw_mode(struct gimbal *gimbal, uint8_t mode) // uint8_t mode是使用函数的时候设置的mode
 {
   if (gimbal == NULL)
     return -RM_INVAL;
 
-  if (mode != gimbal->mode.bit.yaw_mode)
+  if (mode != gimbal->mode.bit.yaw_mode)          //切换mode状态时的初始化，只在输入与现在的状态不同时执行一次
   {
-    gimbal->mode.bit.yaw_mode = mode;
-    if (mode == GYRO_MODE)
+    gimbal->mode.bit.yaw_mode = mode;             //更新mode状态，将输入的mode赋给云台
+    if (mode == GYRO_MODE)                        //从别的模式切换至陀螺仪模式
     {
       gimbal->ctrl[YAW_MOTOR_INDEX].convert_feedback = yaw_gyro_input_convert;
-      gimbal_set_yaw_angle(gimbal, gimbal->sensor.gyro_angle.yaw, YAW_FASTEST);
-    }
-    else if (mode == ENCODER_MODE)
+      gimbal_set_yaw_angle(gimbal, gimbal->sensor.gyro_angle.yaw, YAW_FASTEST);  //第三个参数只在陀螺仪模式下生效，encoder模式和patrol模式没有区别
+			}                                                                            
+    else if (mode == ENCODER_MODE)                //从别的模式切换至encoder模式，根据encoder的角度指令改变电机位置
     {
       gimbal->ctrl[YAW_MOTOR_INDEX].convert_feedback = yaw_ecd_input_convert;
-      gimbal_set_yaw_angle(gimbal, gimbal->ecd_angle.yaw, 0);
+      gimbal_set_yaw_angle(gimbal, gimbal->ecd_angle.yaw, 0);                    //第二个数代表需要到达的位置，第三个数无意义
     }
+    /*ADD by qian*/
+		else if	(mode == PATROL_MODE) 
+		{
+			gimbal->ctrl[YAW_MOTOR_INDEX].convert_feedback = yaw_ecd_input_convert;
+			yaw_patrol = gimbal->ecd_angle.yaw;					// 把全局变量yaw_patrol变成现在的位置，使得云台可以直接进入patrol而不用回0
+			gimbal_set_yaw_angle(gimbal, yaw_patrol, 0);                    //设置云台摆动至yaw_patrol(保持原位)
+		}		
   }
+	else if (mode == PATROL_MODE)				//当mode保持在patrol mode会一直调用下面的代码
+	{
+      gimbal_patrol_handler(gimbal);  //根据现有的值， 计算出下一时刻的全局变量yaw_patrol
+			gimbal_set_yaw_angle(gimbal, yaw_patrol, 0);//让云台运动到yaw_patrol的位置，第三个值无意义，只在gyro模式使用
+	}
 
   return RM_OK;
 }
@@ -310,7 +340,7 @@ int32_t gimbal_execute(struct gimbal *gimbal)
     float yaw;
 
     yaw = gimbal->gyro_target_angle.yaw;
-    center_offset = gimbal->sensor.gyro_angle.yaw - gimbal->ecd_angle.yaw;
+    center_offset = gimbal->sensor.gyro_angle.yaw - gimbal->ecd_angle.yaw;//？？？？？？？？？？？？？？？？？？？？？？？
     ctrl = &(gimbal->ctrl[YAW_MOTOR_INDEX]);
 
     VAL_LIMIT(yaw, YAW_ANGLE_MIN + center_offset, YAW_ANGLE_MAX + center_offset);
@@ -351,6 +381,8 @@ int32_t gimbal_execute(struct gimbal *gimbal)
   
   pdata = motor_device_get_data(&(gimbal->motor[YAW_MOTOR_INDEX]));
   gimbal->ecd_angle.yaw = YAW_MOTOR_POSITIVE_DIR * gimbal_get_ecd_angle(pdata->ecd, gimbal->param.yaw_ecd_center) / ENCODER_ANGLE_RATIO;
+	//？？？？？？？？？？？？？？？ 今年因为电机不一样 所以有direct和encoder ratio？？？？
+	
   controller_execute(&(gimbal->ctrl[YAW_MOTOR_INDEX]), (void *)gimbal);
   controller_get_output(&(gimbal->ctrl[YAW_MOTOR_INDEX]), &motor_out);
   motor_device_set_current(&(gimbal->motor[YAW_MOTOR_INDEX]), (int16_t)YAW_MOTOR_POSITIVE_DIR * motor_out);
@@ -527,3 +559,22 @@ static int32_t pitch_ecd_input_convert(struct controller *ctrl, void *input)
   cascade_fdb->inter_fdb = data->sensor.rate.pitch_rate;
   return RM_OK;
 }
+
+
+static int32_t gimbal_patrol_handler(struct gimbal *gimbal)   //输入结构体gimbal，按照原代码习惯，返回RM_OK
+{
+	/*ADD BY QIAN*/
+  float patrol_speed = PATROL_ANGLE*4.0/(PATROL_PERIOD/GIMBAL_PERIOD);    //单向的摆角 x 四个周期（一个来回是四个PATROL_ANGLE） x （一个来回的时间/云台动一次的时间）
+  if (gimbal->ecd_angle.yaw >= PATROL_ANGLE)  			
+	{
+    count_sign = -1;
+  }
+  if(gimbal->ecd_angle.yaw <= -PATROL_ANGLE)
+	{
+    count_sign = 1;
+	}
+  yaw_patrol += count_sign*patrol_speed;			// 实现来回转，改变全局变量yaw_patrol，使得每次给云台的指令都按照这个值
+	VAL_LIMIT(yaw_patrol, YAW_ANGLE_MIN - 25, YAW_ANGLE_MAX + 25); //限位
+  return RM_OK;
+}
+

@@ -54,16 +54,20 @@
 #define YAW_MOTOR_INDEX 0
 #define PITCH_MOTOR_INDEX 1
 
-#define GIMBAL_SET_YAW (1<<0u)
-#define GIMBAL_SET_PITCH (1<<1u)
-#define GIMBAL_SET_ALL (GIMBAL_SET_YAW | GIMBAL_SET_PITCH)
+#define GIMBAL_SET_YAW (1<<0u)   //1
+#define GIMBAL_SET_PITCH (1<<1u)  //2
+#define GIMBAL_SET_ALL (GIMBAL_SET_YAW | GIMBAL_SET_PITCH)  //3
 
-#define ENCODER_MODE (0u)
-#define GYRO_MODE (1u)
+#define ENCODER_MODE (0u)  //0
+#define GYRO_MODE (1u)     //1
+/*Add by Qian*/
+#define PATROL_MODE (2u)  //2
+//#define DODGE_MODE (3u)  //3
 
-#define YAW_FASTEST (0u)
-#define YAW_CLOCKWISE (1u)
-#define YAW_ANTICLOCKWISE (2u)
+
+#define YAW_FASTEST (0u)     //0
+#define YAW_CLOCKWISE (1u)   //1
+#define YAW_ANTICLOCKWISE (2u)  //2
 
 typedef struct gimbal *gimbal_t;
 
@@ -102,8 +106,8 @@ struct gimbal
     uint8_t state;
     struct
     {
-      uint8_t yaw_mode : 1;
-      uint8_t pitch_mode : 1;
+      uint8_t yaw_mode : 2;  // using 2 bits, 0-3
+      uint8_t pitch_mode : 2; // using 2 bits, 0-3
     } bit;
   } mode;
 
@@ -145,8 +149,10 @@ int32_t gimbal_set_pitch_delta(struct gimbal *gimbal, float pitch);
 int32_t gimbal_set_yaw_delta(struct gimbal *gimbal, float yaw);
 int32_t gimbal_set_pitch_speed(struct gimbal *gimbal, float pitch);
 int32_t gimbal_set_yaw_speed(struct gimbal *gimbal, float yaw);
-int32_t gimbal_set_pitch_angle(struct gimbal *gimbal, float pitch);
-int32_t gimbal_set_yaw_angle(struct gimbal *gimbal, float yaw, uint8_t mode);
+int32_t gimbal_set_pitch_angle(struct gimbal *gimbal, float pitch);//相较yaw没有第三个参数，因为不存在从那边转回的问题
+int32_t gimbal_set_yaw_angle(struct gimbal *gimbal, float yaw, uint8_t mode);//利用gimbal_set_yaw_angle输出偏转（yaw）控制指令
+ 
+//第二个参数为角度值，其零点为初始角度或者底盘角度
 
 int32_t gimbal_set_offset(struct gimbal *gimbal, uint16_t yaw_ecd, uint16_t pitch_ecd);
 

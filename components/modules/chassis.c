@@ -138,7 +138,7 @@ int32_t chassis_execute(struct chassis *chassis)
   return RM_OK;
 }
 
-int32_t chassis_gyro_updata(struct chassis *chassis, float yaw_angle, float yaw_rate)
+int32_t chassis_gyro_updata(struct chassis *chassis, float yaw_angle, float yaw_rate)//陀螺仪update
 {
   if (chassis == NULL)
     return -RM_INVAL;
@@ -147,7 +147,7 @@ int32_t chassis_gyro_updata(struct chassis *chassis, float yaw_angle, float yaw_
   return RM_OK;
 }
 
-int32_t chassis_set_speed(struct chassis *chassis, float vx, float vy, float vw)
+int32_t chassis_set_speed(struct chassis *chassis, float vx, float vy, float vw)//设置速度
 {
   if (chassis == NULL)
     return -RM_INVAL;
@@ -157,7 +157,7 @@ int32_t chassis_set_speed(struct chassis *chassis, float vx, float vy, float vw)
   return RM_OK;
 }
 
-int32_t chassis_set_acc(struct chassis *chassis, float ax, float ay, float wz)
+int32_t chassis_set_acc(struct chassis *chassis, float ax, float ay, float wz) //设置加速度
 {
   if (chassis == NULL)
     return -RM_INVAL;
@@ -167,11 +167,11 @@ int32_t chassis_set_acc(struct chassis *chassis, float ax, float ay, float wz)
   return RM_OK;
 }
 
-int32_t chassis_set_vw(struct chassis *chassis, float vw)
+int32_t chassis_set_vw(struct chassis *chassis, float vw) //设置chassis和云台夹角
 {
   if (chassis == NULL)
     return -RM_INVAL;
-  chassis->mecanum.speed.vw = vw;
+  chassis->mecanum.speed.vw = vw;  //夹角还有速度？？？？
   return RM_OK;
 }
 
@@ -184,7 +184,7 @@ int32_t chassis_set_vx_vy(struct chassis *chassis, float vx, float vy)
   return RM_OK;
 }
 
-int32_t chassis_set_offset(struct chassis *chassis, float offset_x, float offset_y)
+int32_t chassis_set_offset(struct chassis *chassis, float offset_x, float offset_y) //offset是指云台相对底盘的xy轴位移
 {
   if (chassis == NULL)
     return -RM_INVAL;
@@ -195,7 +195,7 @@ int32_t chassis_set_offset(struct chassis *chassis, float offset_x, float offset
   return RM_OK;
 }
 
-int32_t chassis_get_info(struct chassis *chassis, struct chassis_info *info)
+int32_t chassis_get_info(struct chassis *chassis, struct chassis_info *info)  //底盘读数
 {
   if (chassis == NULL)
     return NULL;
