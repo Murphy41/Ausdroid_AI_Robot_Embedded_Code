@@ -62,7 +62,7 @@ The red light is always on when The remote control is offline or the referee sys
 
 ### Document
 
-- Protocol  [protocol](../en/protocol.md)
+- Protocol  [protocol](doc/en/protocol.md)
 
 ## Quick Start
 
@@ -74,11 +74,11 @@ Using RM Development Board Type A as main control board, the location of each fu
 
 Attention: uwb, single axis gyroscope and CAN2 communication port use the same CAN bus, no need to care about the specific order
 
-![](../image/chassis.PNG)
+![](doc/image/chassis.PNG)
 
 **Gimbal Hardware Port**
 
-![](../image/gimbal.PNG)
+![](doc/image/gimbal.PNG)
 
 ### Functional Module
 
@@ -120,7 +120,7 @@ left toggle rod position and its corresponding function:
 2. Using standard CMSIS-RTOS interface, convenient to transfer to other operating system or platform
 3. Provide a set of abstract infantry robot bsp, simplifying upper logic
 
-![](../image/frame.png)
+![](doc/image/frame.png)
 
 **Driver**：Directly operate the device driver of the underlying hardware. On the basis of library functions and registers, add lock and asynchronous mechanisms to provide an easier to use api.
 
@@ -142,11 +142,11 @@ left toggle rod position and its corresponding function:
 
 #### system startup
 system startup and distinguish the start task through jumper cap of the international Development Board Type A.
-![](../image/startup.png)
+![](doc/image/startup.png)
 
 ### Inheritance Relationship
 
-![](../image/object.png)
+![](doc/image/object.png)
 
 ### Hardware system
 
