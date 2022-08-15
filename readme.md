@@ -1,180 +1,173 @@
 
-## 概述
+## Summarize
 
-- en doc   [readme](doc/en/readme.md)
-
-### 软件环境
+### software environment
 
  - Toolchain/IDE : MDK-ARM V5
  - package version: STM32Cube FW_F4 V1.21.0
  - FreeRTOS version: 9.0.0
  - CMSIS-RTOS version: 1.02
 
-### 编程规范
+### Programming standard
 
-- 变量和函数命名方式遵循 Unix/Linux 风格
-- chassis\_task与gimbal\_task是强实时控制任务，优先级最高，禁止被其他任务抢占或者阻塞
-- 不需要精确计时的任务，采用自行实现的软件定时器实现，定时精度受任务调度影响
+- Naming of variables and functions should follow Unix/Linux style
+- chassis\_task and gimbal\_task is hard real-time task, have the highest priority cannot be preempted or blocked by other tasks
+- The tasks that do not need accurate timing are realized by self-actualized software timer, and the timing accuracy is affected by task scheduling
 
-### 注意事项
+### Notice
 
-1.由于发射机构触动开关阻力非常小，轻微转动拨弹电机就可能造成子弹越过触动开关触碰摩擦轮，导致摩擦轮摩擦过大无法启动，**造成摩擦轮磨损和电机启动失败**。因此，开电前务必检查是否有子弹已经越过触动开关。**取出办法**：用手按住一侧摩擦轮，旋转另一个摩擦轮。
+1.As the shooting system trigger have a low resistance, small rotation of load motor could make the bullet move across the trigger and touch the friction wheel, causes the friction wheel motor unable to launch. **friction wheel will be wore and motor launch fail**. As a result, before you turn on the power, please be sure that no bullet have across the trigger. **How to take the bullet out**：hold friction wheel on one side with your hand, rotate the other friction wheel.
 
-2.由于snail电机初始化未成功时，电机产生叫声的频率在角速度响应范围内，会极大的干扰云台控制，导致无法正常控制。**解决方法**：可以对陀螺仪数据采用**带阻滤波**解决。（本版本未加入）
+2.As the snail motor fail to initialize, the frequency of the sound generate by the motor is in the response range of angular velocity. it will disturb the control of the gimbal, result in loss of control. **Solution**：could use bandstop filter on gyroscope data. （not include in this version）
 
-3.在云台控制逻辑中，考虑到调试视觉识别装甲时可能需要发射子弹功能，所以自动模式下开放了单发功能。但如果在单发后没有将左拨杆回中，会导致在从自动模式下切回手动模式立刻触发连发模式。因此，**在自动模式下单发之后务必保证将拨杆拨回中间位置。**
+3.In gimbal control logic, consider that testing virsual recognize armor may need shoot bullet, we allowed single shoot mode under full-auto mode, but if you forget to return the rod to the middle. it will cause the robot change from full-auto mode to manual mode and start continuous shoot mode. As a result, **after you shoot a bullet under full-auto mode, please return the left rod to the middle**
 
-4.国际开发板A型上有一枚跳线帽，用于短接板载4pin排针串口R与G（只有底盘需要短接R和G）。固件通过R引脚是否拉低区分底盘还是云台。出现不能控制且无声光报警请检查跳线帽是否松动，
+4.International development board type A have a jumper cap. it used to short on board 4-pin serial port R and G (only the board on chassis need short R and G). the firmware check if the signal of R is low to decide it on the chassis or gimbal. if you cannot control the robot and no-sound-and-light alert, please check if the jumper cap is loose.
 
-### 云台校准方法
+### Gimbal calibration method
+Underlying code integrated with gimbal automatic calibration function. it first uses IMU to calibrate pitch, making gimbal stays at water level. This process spends 20 to 30 seconds. Then Yaw calculate the mid-value after turns left until reach the left limit and turns right until reach the right limit.
 
-底层代码集成了云台自动校准功能，原理是先利用imu校准pitch，控制云台保持在水平面，当误差小于0.15度时，记录pitch中值，此过程大概花费20~30s；然后YAW向左旋转直到触碰左侧限位，再向右旋转至右侧限位，计算YAW中值。
+Triggering Condition:
+1. Development board first time flashed program or parameter area is emptied
+2. press the on-board white button to trigger
+3. Host send a protocol signal to trigger
 
-触发条件：
+Notice：when you calibrate, you must put the chassis on a horizontal ground. Pitch may not able to reach the position in the range of error during calibration. That's because the load on gimbal is too heavy. you can manually move upward the gimbal in this case, to accelerate the calibration.
 
-1.开发板首次刷入程序或者参数区被清空
+### Module Offline Instruction
+When a certain module of the vehicle is offline, it can determine which module has a problem according to the different state of the buzzer of the development board. And perform error positioning.
 
-2.按下板载白色按键触发
+The number of buzzer beeps is indicated according to the priority of the offline module. For example, the priority of the gimbal motor is higher than that of the load motor. If offline occurs at the same time, the current offline device is indicated as the gimbal motor.
 
-3.上位机发送协议命令触发
+The status of the module offline is as follows. The number corresponds to the number of times the buzzer sounds each time, sorted according to priority:
 
-注意：校准时务必将底盘放在水平地面；校准中可能出现pitch始终无法到达指定误差范围内，此时是因为云台配重问题导致，可以用手向上掰一下然后松开云台，加速调节过程。
+#### Chassis
 
-### 模块离线说明
+1. right-front chassis motor offline
+2. left-front chassis motor offline
+3. left-back chassis motor offline
+4. right-back chassis motor offline
 
-当车辆的某个模块离线时，可以根据开发板蜂鸣器的不同状态判断哪个模块出现了问题，并进行错误定位
 
-蜂鸣器鸣叫次数按照离线模块的优先级进行错误指示，例如云台电机优先级高于拨弹电机，如果同时发生离线，先指示当前离线设备是云台电机
+#### Gimbal
 
-模块离线对应的状态如下，数字对应蜂鸣器每次鸣叫的次数，按照优先级排序：
+5. gimbal yaw motor offline
+6. gimbal pitch motor offline
+7. load motor offline
+8. single axis gyroscope offline
 
-#### 底盘模块
+#### Remote Controller
 
-1. 右前轮电机掉线
-2. 左前轮电机掉线
-3. 左后轮电机掉线
-4. 右后轮电机掉线
+The red light is always on when The remote control is offline or the referee system or the serial port of the PC is not connected.
 
-#### 云台模块
+### Document
 
-5. 云台 YAW 电机掉线
-6. 云台 PITCH 电机掉线
-7. 拨盘电机掉线
-8. 单轴陀螺仪掉线
+- Protocol  [protocol](../en/protocol.md)
 
-#### 遥控器离线
+## Quick Start
 
-此时红灯常亮
+### Hardware Port
 
-### 文档
+Using RM Development Board Type A as main control board, the location of each functional port is as follows：
 
-- 协议文档  [protocol](doc/ch/protocol.md)
-- protocol [document](doc/en/protocol.md)
+**Chassis Hardware Port**
 
-## 快速开始
+Attention: uwb, single axis gyroscope and CAN2 communication port use the same CAN bus, no need to care about the specific order
 
-### 硬件接口
+![](../image/chassis.PNG)
 
-主控板使用 RM 开发板 A 型，各个功能接口的位置如下：
+**Gimbal Hardware Port**
 
-**底盘硬件接口**
+![](../image/gimbal.PNG)
 
-注意：uwb、单轴陀螺仪、通信can2硬件上使用一个can，无需考虑接线顺序。
-![](doc/image/chassis.PNG)
+### Functional Module
 
-**云台硬件接口**
+#### Manual Mode：
 
-![](doc/image/gimbal.PNG)
+support basic control with remote controller
 
-### 功能模块
+#### Full-auto Mode：
 
-#### 手动模式：
+In this mode, Host PC have the full control of chassis, gimbal and shooting system. Full control includes control of these actuators in specific physical units.
 
-提供遥控器基础控制。
+#### Control Rod Instruction：
 
-#### 全自动模式：
+##### Manual
 
-这种模式下底盘、云台、发射机构受到上层 PC 的完全控制，完全控制包含对这些执行机构以具体物理单位的控制。
+remote control (chassis follows gimbal) : right toggle rod goes up
+remote control (gimbal follows chassis) : right toggle rod goes middle
 
-#### 操作档位说明：
+- turn on/off friction wheel (left toggle rod goes up)
+- single/continuous shoot (left toggle rod goes down)
 
-##### 手动档
+##### Auto
 
-遥控器控制（底盘跟随云台）：右拨杆上
-遥控器控制（云台跟随地盘）：右拨杆中
+Auto mode when competition (right toggle rod goes down)
 
-- 开、关摩擦轮（左拨杆上拨）
-- 单发、连发射击（左拨杆下拨）
+left toggle rod position and its corresponding function:
 
-##### 自动档
+- up: turn on friction wheel,
+- mid: turn off friction wheel,
+- down: single projectile shooting mode only
 
-正常比赛时使用（拨杆右下）
+## System Instruction
 
-左拨杆位置对应功能：
+### System Architecture
 
-- 上：摩擦轮打开，其他全接管
-- 中：摩擦轮关闭，其他全接管
-- 下：只具有单发功能
+#### Architecture
 
-## 程序说明
+1. Using free and open-source freertos operating system, consistent with other open-source protocol license
+2. Using standard CMSIS-RTOS interface, convenient to transfer to other operating system or platform
+3. Provide a set of abstract infantry robot bsp, simplifying upper logic
 
-### 程序体系结构
+![](../image/frame.png)
 
-#### 体系框架
+**Driver**：Directly operate the device driver of the underlying hardware. On the basis of library functions and registers, add lock and asynchronous mechanisms to provide an easier to use api.
 
-1. 使用免费及开源的 freertos 操作系统，兼容其他开源协议 license；
-2. 使用标准 CMSIS-RTOS 接口，方便不同操作系统或平台间程序移植；
-3. 提供一套抽象步兵机器人bsp，简化上层逻辑；
+**Device**：An external module with one or more bus inputs, one or more data outputs, or a general-purpose software module (drop-off protection). Currently, the driver is abstracted into devices for RM materials.
 
-![](doc/image/frame.png)
+**Controller**：Single-input single-output models. Providing some common call interfaces, and changing different control algorithms depends on different registration functions.
 
-**Driver**：直接操作底层硬件的设备驱动，在库函数和寄存器基础上，增加锁和异步等机制,提供更加易于使用的api。
+**Algorithm**：Providing module algorithms, no interdependencies between basic files.
 
-**Device**：具有一种或者多种总线输入，一种或者多种数据输出的外部模块，或者通用的软件模块（掉线保护）。目前主要针对RM物资的驱动抽象成设备。
+**Module**：A module consisting of a driver, device, controller, and algorithm, which can realize a specific function. For example, a two-axis pan gimbal composed of RM motors and a McNamm wheel chassis.
 
-**Controller**：单输入单输出模型，提供一些公用的调用接口，更换不同的控制算法取决于不同的注册函数。
+**Utilities**：General system components, such as the log system.
 
-**Algorithm**：提供模块算法，基本文件间无相互依赖。
+**Protocol**：A set of upper and lower layer communication protocols for oriented-interfaces.
 
-**Module**：由driver、device、controller、algorithm组成的，可以实现某种特殊功能的模块。比如RM电机组成的二轴云台、RM电机构成的麦轮底盘。
+**Application**：Upper application logic, including various mode switches.
 
-**Utilities**：通用系统组件，比如log系统。
+### Software system
 
-**Protocol**：面向接口的一套上层和底层通信协议。
+#### system startup
+system startup and distinguish the start task through jumper cap of the international Development Board Type A.
+![](../image/startup.png)
 
-**Application**：上层应用逻辑，包括各类模式切换。
+### Inheritance Relationship
 
-### 软件体系
+![](../image/object.png)
 
-#### 程序启动
+### Hardware system
 
-程序启动通过国际开发板A型的跳线帽区分启动任务
-![](doc/image/startup.png)
+1. Main control MCU：STM32F427IIHx, Operating frequency: 180MHz
+2. Module communication method：CAN；CAN devices：motor speed controller, gyroscope module
+3. upper layer and lower layer communication method: USB Virtual serial port
+4. McNamm wheel install method：X-type
 
-### 继承关系
+### Protocal Data
 
-![](doc/image/object.png)
+#### Data Classification
 
-### 硬件体系
+Protocol data can be divided into two categories according to the direction of communication：
 
-1. 主控 MCU：STM32F427IIHx，配置运行频率180MHz
-2. 模块通信方式：CAN；CAN设备：电机电调、陀螺仪模块
-3. 上下层通信方式：USB虚拟串口
-4. 麦轮安装方式：X型
+lower layer send to upper layer:
 
-### 协议数据
+1. Feedback information: including feedback information of each sensors, and some feedback information calculated by the bottom layer;
+2. The underlying state information: including the running state of the underlying device, some response of the underlying layer to the upper layer data, etc.
+3. Forward data: contains all the information of the referee system, customized information on the server side；
 
-#### 数据分类
+lower layer receive from upper layer:
 
-协议数据按照通信方向可以分为两大类：
-
-底层发送给上层的数据：
-
-1. 反馈信息：包含各个机构传感器反馈信息、底层计算出来的一些反馈信息；
-2. 底层状态信息：包含底层设备运行状态、底层对上层数据的一些响应等；
-3. 转发数据：包含裁判系统的全部信息、服务器端的自定义信息；
-
-底层接收的上层数据：
-
-1. 控制信息：上层对底层 3 个执行机构的控制信息；
+1. Control information: upper layer control information on the bottom three actuators
 
