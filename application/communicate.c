@@ -106,9 +106,9 @@ void communicate_task(void const *argument)
   if (app == CHASSIS_APP)
   {
     protocol_local_init(CHASSIS_ADDRESS);
-    protocol_can_interface_register("gimbal_can2", 4096, 1, PROTOCOL_CAN_PORT2, GIMBAL_CAN_ID, CHASSIS_CAN_ID, can2_send_data);
+    // protocol_can_interface_register("gimbal_can2", 4096, 1, PROTOCOL_CAN_PORT2, GIMBAL_CAN_ID, CHASSIS_CAN_ID, can2_send_data); // Mingliang
     protocol_uart_interface_register("manifold2", 4096, 1, PROTOCOL_USB_PORT, usb_interface_send);
-    protocol_set_route(GIMBAL_ADDRESS, "gimbal_can2");
+    // protocol_set_route(GIMBAL_ADDRESS, "gimbal_can2"); // Mingliang
     protocol_set_route(MANIFOLD2_ADDRESS, "manifold2");
   }
   else
