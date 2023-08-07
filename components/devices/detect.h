@@ -66,6 +66,9 @@
 
 typedef struct detect_device *detect_device_t;
 
+/**
+ * @brief This structure is for detecting any offline device: remote controller, motors.
+ * */ 
 struct detect_device
 {
   struct device parent;
@@ -85,15 +88,15 @@ int32_t detect_device_register(detect_device_t detect_dev,
 int32_t detect_device_update(detect_device_t detect_dev, uint32_t event);
 int32_t detect_device_check(detect_device_t detect_dev, uint32_t event);
 uint32_t detect_device_get_event(detect_device_t detect_dev);
-int32_t detect_device_get_state_or(detect_device_t detect_dev, int32_t event);
+int32_t detect_device_get_state_or(detect_device_t detect_dev, int32_t event); // Not used
 int32_t detect_device_add_event(detect_device_t detect_dev,
                                 uint32_t event,
                                 uint32_t timeout,
                                 int32_t (*offline_callback)(void *argc),
                                 void *argc);
-int32_t detect_device_set_mode(detect_device_t detect_dev, uint8_t callback_mode);
-int32_t detect_device_modify_timeout(detect_device_t detect_dev, uint32_t event, uint32_t timeout);
-int32_t detect_device_enable_event(detect_device_t detect_dev, uint32_t event);
-int32_t detect_device_disable_event(detect_device_t detect_dev, uint32_t event);
+int32_t detect_device_set_mode(detect_device_t detect_dev, uint8_t callback_mode); // Not used
+int32_t detect_device_modify_timeout(detect_device_t detect_dev, uint32_t event, uint32_t timeout); // Not used
+int32_t detect_device_enable_event(detect_device_t detect_dev, uint32_t event); // Not used
+int32_t detect_device_disable_event(detect_device_t detect_dev, uint32_t event); // Not used
 detect_device_t detect_device_find(const char *name);
 #endif // __DETECT_H__

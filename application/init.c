@@ -51,7 +51,8 @@ extern int ulog_console_backend_init(void);
 
 void system_config(void)
 {
-  glb_sys_cfg = HAL_GPIO_ReadPin(SYS_CFG_Port, SYS_CFG_Pin);
+  //glb_sys_cfg = HAL_GPIO_ReadPin(SYS_CFG_Port, SYS_CFG_Pin); // Commented by Mingliang 
+	glb_sys_cfg = CHASSIS_APP; // Added by Mingliang
 }
 
 uint8_t get_sys_cfg(void)
@@ -79,7 +80,7 @@ void hw_init(void)
     chassis_pid_register(&chassis, "chassis", DEVICE_CAN1);
     chassis_disable(&chassis);
   }
-  else
+	else
   {
     rc_device_register(&rc_dev, "can_rc", 0);
     gimbal_cascade_register(&gimbal, "gimbal", DEVICE_CAN1);
