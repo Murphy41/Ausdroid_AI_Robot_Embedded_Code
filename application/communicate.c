@@ -68,7 +68,9 @@ static int32_t usb_rcv_callback(uint8_t *buf, uint32_t len)
   osSignalSet(communicate_task_t, RECV_PROTOCOL_SIGNAL);
   return len;
 }
-
+/**
+ * @brief Get remote controller cmd forwarded by CAN 
+*/
 int32_t dr16_rx_data_by_can(uint8_t *buff, uint16_t len)
 {
   rc_device_t rc_dev;

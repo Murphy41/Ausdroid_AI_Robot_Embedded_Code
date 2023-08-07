@@ -15,6 +15,10 @@
  *  along with this program. If not, see <http://www.gnu.org/licenses/>.
  ***************************************************************************/
 
+/**
+ * @brief This library is for controls through PWM
+*/
+
 #ifndef __DRV_IO_H__
 #define __DRV_IO_H__
 
