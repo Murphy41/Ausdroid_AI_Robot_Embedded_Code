@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "protocol.h": "c",
+        "sys.h": "c",
+        "gimbal_task.h": "c",
+        "single_gyro.h": "c",
+        "board.h": "c",
+        "gimbal.h": "c",
+        "drv_dr16.h": "c",
+        "protocol_common.h": "c"
+    }
+}

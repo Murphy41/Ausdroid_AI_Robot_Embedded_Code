@@ -146,19 +146,23 @@ void board_config(void)
 {
   soft_timer_init();
 
+  // Communication ports init
   usart6_manage_init();
 	usart3_manage_init();
   can_manage_init();
   pwm_device_init();
   mpu_device_init();
 
+  // Remote controller init
   dr16_uart_init();
   dr16_rx_uart_callback_register(dr16_rx_data_by_uart);
 
+  // Set control loop for actuators
   soft_timer_register(motor_can1_output_1ms, NULL, 1);
   soft_timer_register(beep_ctrl_times, NULL, 1);  
   soft_timer_register(led_toggle_300ms, NULL, 1); 
 
+  // Sensor and actuator registration
   motor_device_can_send_register(motor_canstd_send);
   single_gyro_can_send_register(gyro_can_std_send);
 

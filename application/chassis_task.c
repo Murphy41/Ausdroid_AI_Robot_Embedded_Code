@@ -65,8 +65,9 @@ void chassis_task(void const *argument)
         vy = -(float)prc_info->ch1 / 660 * MAX_CHASSIS_VY_SPEED;
         wz = -(float)prc_info->ch3 / 660 * MAX_CHASSIS_VW_SPEED;  //云台跟随地盘 所以这里地盘得设置角度
         chassis_set_offset(pchassis, 0, 0);    //为什么不是7和0？？？？？？？？
-        chassis_set_speed(pchassis, vx, vy, wz);  //set speed参数的时候用的都是vw 这里为什么用wz  笔误？？？？？？？？
-      }
+        chassis_set_speed(pchassis, vx, vy, wz); 
+			}
+        
 
       if (rc_device_get_state(prc_dev, RC_S2_MID2DOWN) == RM_OK) 
       {

@@ -68,7 +68,9 @@ static int32_t usb_rcv_callback(uint8_t *buf, uint32_t len)
   osSignalSet(communicate_task_t, RECV_PROTOCOL_SIGNAL);
   return len;
 }
-
+/**
+ * @brief Get remote controller cmd forwarded by CAN 
+*/
 int32_t dr16_rx_data_by_can(uint8_t *buff, uint16_t len)
 {
   rc_device_t rc_dev;
@@ -104,9 +106,9 @@ void communicate_task(void const *argument)
   if (app == CHASSIS_APP)
   {
     protocol_local_init(CHASSIS_ADDRESS);
-    protocol_can_interface_register("gimbal_can2", 4096, 1, PROTOCOL_CAN_PORT2, GIMBAL_CAN_ID, CHASSIS_CAN_ID, can2_send_data);
+    // protocol_can_interface_register("gimbal_can2", 4096, 1, PROTOCOL_CAN_PORT2, GIMBAL_CAN_ID, CHASSIS_CAN_ID, can2_send_data); // Mingliang
     protocol_uart_interface_register("manifold2", 4096, 1, PROTOCOL_USB_PORT, usb_interface_send);
-    protocol_set_route(GIMBAL_ADDRESS, "gimbal_can2");
+    // protocol_set_route(GIMBAL_ADDRESS, "gimbal_can2"); // Mingliang
     protocol_set_route(MANIFOLD2_ADDRESS, "manifold2");
   }
   else

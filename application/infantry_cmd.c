@@ -85,7 +85,7 @@ void infantry_cmd_task(void const *argument)
   {
     prc_dev = rc_device_find("uart_rc");
     protocol_rcv_cmd_register(CMD_STUDENT_DATA, student_data_transmit);
-    protocol_rcv_cmd_register(CMD_PUSH_GIMBAL_INFO, gimbal_info_rcv);
+    // protocol_rcv_cmd_register(CMD_PUSH_GIMBAL_INFO, gimbal_info_rcv); // Mingliang
     protocol_rcv_cmd_register(CMD_SET_CHASSIS_SPEED, chassis_speed_ctrl);
     protocol_rcv_cmd_register(CMD_SET_CHASSIS_SPD_ACC, chassis_spd_acc_ctrl);
   }
